@@ -1,17 +1,37 @@
 import {Field, Value, ConditionType, ConditionOperator, GroupOperator, Condition, Group, Query} from './query';
+import {IConditionValidate} from './IConditionValidate';
 
 export class QueryBuilder {
 	private operator: GroupOperator;
 	private parent: QueryBuilder;
 	private items: (QueryBuilder | Condition)[] = [];
+	private conditionValidate: IConditionValidate;
 
-	public constructor(operator: GroupOperator = 'and', parent: QueryBuilder = null) {
+	public constructor(operator: GroupOperator = 'and', parent: QueryBuilder = null, conditionValidate: IConditionValidate = null) {
 		this.operator = operator;
 		this.parent = parent;
+		this.conditionValidate = conditionValidate;
 	}
 
 	public addCondition(left: Field, right: Field | Value, type: ConditionType = 'value', operator: ConditionOperator = 'eq'): QueryBuilder {
-		// @todo add validation
+		if (this.conditionValidate) {
+			this.conditionValidate.throwErrorIfInvalidConditionOperator(operator);
+			this.conditionValidate.throwErrorIfInvalidConditionType(type);
+			this.conditionValidate.throwErrorIfInvalidField(left);
+			switch (type) {
+				case 'field':
+					this.conditionValidate.throwErrorIfInvalidField(right);
+					break;
+
+				case 'value':
+					this.conditionValidate.throwErrorIfInvalidValue(left, right);
+					break;
+
+				default:
+					throw new Error('Unsupported condition type: ' + type);
+			}
+		}
+
 		this.items.push({
 			left: left,
 			right: right,
